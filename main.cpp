@@ -3,7 +3,6 @@
 #include <string>
 #include <list>
 #include <algorithm>
-#include <vector>
 #include <fstream>
 #include <iterator>
 #include <filesystem>
@@ -11,19 +10,31 @@
 
 using namespace std;
 
+//Возможные действия с фрагментами:
+//--------------
+//Не трогать найденное - просто скопировать на вывод. Полезно для escape-последовательностей, например, \\ или \%
 #define A_DONT_TOUCH 0
+//Переместить фрагмент в конец документа
 #define A_MOVE_TO_END 1
+//Удалить фрагмент
 #define A_REMOVE 2
+//Удалить фрагмент, но оставить символы обозначающие конец фрагмента. Полезно для удаления комментариев ограниченных в конце переносом (\n) но сохранения переноса
 #define A_REMOVE_ADD_END 3
+//Заменить строку заданную searchable_t::begin на searchable_t::end
 #define A_REPLACE 4
+//Маркер, куда нужно поместить перемещаемые фрагменты
 #define A_MOVE_HERE 5
 
 typedef struct {
+    //Начало фрагмента
     string begin;
+    //Конец фрагмента (или пустая строка, если фрагмент состоит только из начала, или строка на которую будет заменяться начало для действия A_REPLACE
     string end;
+    //Действие
     int action;
 } searchable_t;
 
+//Определение действий со строками
 searchable_t searchable_items[] = {
         {"\\%",                               "",                                                                    A_DONT_TOUCH},
         {"\\\\",                              "",                                                                    A_DONT_TOUCH},
@@ -71,6 +82,7 @@ searchable_t searchable_items[] = {
         {"\\end{document}",                   "",                                                                    A_MOVE_HERE}
 };
 
+//Ищет подстроку в потоке попутно копируя символы в выходной поток. Использует тот же алгоритм Ахо-Корасик что и основной поиск (в processFile)
 void copy_till(istream_iterator<char> &begin, istream_iterator<char> &end, ostream &destination, string suffix) {
     aho_corasick::trie suffixSearcher;
     suffixSearcher.insert(suffix);
@@ -81,6 +93,7 @@ void copy_till(istream_iterator<char> &begin, istream_iterator<char> &end, ostre
     }
 }
 
+//Обрабатывает один файл
 void processFile(aho_corasick::trie &trie, const filesystem::path &filename) {
     cout << filename;
     //Подготавливаем файлы
@@ -155,6 +168,7 @@ void processFile(aho_corasick::trie &trie, const filesystem::path &filename) {
 
 int main(int argc, char **argv) {
     list<string> filenames;
+    //Сначала сформируем список файлов
     for (auto i = 1; i < argc; i++) {
         string dirname(argv[i]);
         auto index = find(dirname.rbegin(), dirname.rend(), '\\');
@@ -174,17 +188,20 @@ int main(int argc, char **argv) {
         if (findHandle != INVALID_HANDLE_VALUE)
             FindClose(findHandle);
     }
+    //Проблема - ничего не найдено
     if (!filenames.size()) {
         cerr << "No files found." << endl << "Sample usage:" << endl
              << "trpp2a_new c:\\folder1\\*.tex d:\\folder2\\*.tex" << endl;
     }
 
+    //Подготовим "бор" (ДКА) для алгоритма Ахо-Корасик
     auto n = sizeof(searchable_items) / sizeof(*searchable_items);
     aho_corasick::trie trie;
     for (auto i = 0; i < n; i++)
         trie.insert(searchable_items[i].begin);
 
 
+    //Теперь обработаем файлы
     for (auto it = filenames.begin(); it != filenames.end(); it++)
         processFile(trie, filesystem::path(*it));
 
