@@ -122,6 +122,7 @@ void processFile(aho_corasick::trie &trie, const filesystem::path &filename) {
             switch (matched.action) {
                 case A_REPLACE: // Заменяем найденое на searchable_t::end
                     output << matched.end;
+                    iter++;
                     break;
                 case A_MOVE_TO_END: // Перемещаем фрагмент в конец
                     // Добавляем во временное хранилище начало фрагмента - оно было съедено поиском
@@ -148,6 +149,7 @@ void processFile(aho_corasick::trie &trie, const filesystem::path &filename) {
                     break;
                 case A_MOVE_HERE: // Вставляем сюда накопленные ранее фрагменты
                     output << end_insert.str() << matched.begin;
+                    iter++;
                     break;
                 case A_DONT_TOUCH: // Не трогаем такой фрагмент
                     output << *iter++;
