@@ -36,8 +36,10 @@ typedef struct {
 
 //Определение действий со строками
 searchable_t searchable_items[] = {
+        {"\\\"",                              "",                                                                    A_DONT_TOUCH},
         {"\\%",                               "",                                                                    A_DONT_TOUCH},
         {"\\\\",                              "",                                                                    A_DONT_TOUCH},
+        {"\\~",                               "",                                                                    A_DONT_TOUCH},
         {"$$",                                "$$",                                                                  A_MOVE_TO_END},
         {"\\[",                               "\\]",                                                                 A_MOVE_TO_END},
         {"\\midinsert",                       "\\endinsert",                                                         A_MOVE_TO_END},
@@ -75,6 +77,8 @@ searchable_t searchable_items[] = {
         {"\\pagebreak",                       "",                                                                    A_REMOVE},
         {"\\goodbreak",                       "",                                                                    A_REMOVE},
         {"\\newpage",                         "",                                                                    A_REMOVE},
+        {"~",                                 " ",                                                                   A_REPLACE},
+        {"\"",                                " ",                                                                   A_REPLACE},
         {"\\linebreak",                       "\\relax",                                                             A_REPLACE},
         {"\\nobreak",                         "\\relax",                                                             A_REPLACE},
         {"\\break",                           "\\relax",                                                             A_REPLACE},
@@ -88,8 +92,8 @@ void copy_till(istream_iterator<char> &begin, istream_iterator<char> &end, ostre
     suffixSearcher.insert(suffix);
     auto match = suffixSearcher.nextMatch(begin, end, destination);
     if (match.size() == 0) {
-        cout << "Cannot find end of movable section " << suffix << endl;
-        return;
+        cout << " FATAL ERROR: Cannot find end of movable section " << suffix;
+        throw 1;
     }
 }
 
@@ -106,59 +110,69 @@ void processFile(aho_corasick::trie &trie, const filesystem::path &filename) {
     istream_iterator<char> end;
     stringstream end_insert;
 
-    //Основной цикл
-    while (true) {
-        //Ищем что-нибудь из списка, попутно выводя симолы в выходной файл
-        auto m = trie.nextMatch(iter, end, output);
-        if (m.size() > 0) {
-            //Это то, что мы нашли. Нужно выбрать совпадение максимальной длины.
-            auto &matched = searchable_items[max_element(m.begin(), m.end(), [](auto &a, auto &b) {
-                return a.size() - b.size();
-            })->get_index()];
-            //Откатываемся обратно на длину найденного, т.к. в общем случае ничего делать не надо
-            if (matched.action != A_DONT_TOUCH)
-                output.seekp(-matched.begin.size() + 1, ios::cur);
+    try {
+        //Основной цикл
+        while (true) {
+            //Ищем что-нибудь из списка, попутно выводя симолы в выходной файл
+            auto m = trie.nextMatch(iter, end, output);
+            if (m.size() > 0) {
+                //Это то, что мы нашли. Нужно выбрать совпадение максимальной длины.
+                auto &matched = searchable_items[max_element(m.begin(), m.end(), [](auto &a, auto &b) {
+                    return a.size() < b.size();
+                })->get_index()];
+                //Откатываемся обратно на длину найденного, т.к. в общем случае ничего делать не надо
+                if (matched.action != A_DONT_TOUCH)
+                    output.seekp(-matched.begin.size() + 1, ios::cur);
 
-            switch (matched.action) {
-                case A_REPLACE: // Заменяем найденое на searchable_t::end
-                    output << matched.end;
-                    iter++;
-                    break;
-                case A_MOVE_TO_END: // Перемещаем фрагмент в конец
-                    // Добавляем во временное хранилище начало фрагмента - оно было съедено поиском
-                    end_insert << matched.begin;
-                    iter++;
-                    // Если задан конец фрагмента - находим его, попутно копируя во временное хранилище
-                    if (matched.end.size()) {
-                        copy_till(iter, end, end_insert, matched.end);
-                        end_insert << *iter++;
-                    }
-                    end_insert << endl << endl;
-                    output << " ..... ";
-                    break;
-                case A_REMOVE: // Удаляем фрагмент
-                case A_REMOVE_ADD_END:
-                    if (matched.end.size()) { // Если задан конец фрагмента, надо его найти и удалить (не копировать) символы до его конца.
-                        if (search(iter, end, matched.end.begin(), matched.end.end()) == end) {
-                            cout << "Cannot find end of removable section " << matched.end << endl;
-                        }
+                switch (matched.action) {
+                    case A_REPLACE: // Заменяем найденое на searchable_t::end
+                        output << matched.end;
                         iter++;
-                        if (matched.action == A_REMOVE_ADD_END)
-                            output << matched.end;
-                    }
-                    break;
-                case A_MOVE_HERE: // Вставляем сюда накопленные ранее фрагменты
-                    output << end_insert.str() << matched.begin;
-                    iter++;
-                    break;
-                case A_DONT_TOUCH: // Не трогаем такой фрагмент
-                    output << *iter++;
-                    break;
-                default:
-                    break;
+                        break;
+                    case A_MOVE_TO_END: // Перемещаем фрагмент в конец
+                        // Добавляем во временное хранилище начало фрагмента - оно было съедено поиском
+                        end_insert << matched.begin;
+                        iter++;
+                        // Если задан конец фрагмента - находим его, попутно копируя во временное хранилище
+                        if (matched.end.size()) {
+                            copy_till(iter, end, end_insert, matched.end);
+                            end_insert << *iter++;
+                        }
+                        end_insert << endl << endl;
+                        output << " ..... ";
+                        break;
+                    case A_REMOVE: // Удаляем фрагмент
+                        iter++;
+                    case A_REMOVE_ADD_END:
+                        if (matched.end.size()) { // Если задан конец фрагмента, надо его найти и удалить (не копировать) символы до его конца.
+                            if (search(iter, end, matched.end.begin(), matched.end.end()) == end) {
+                                cout << " FATAL ERROR: Cannot find end of removable section " << matched.end;
+                                throw 1;
+                            }
+                            iter++;
+                            if (matched.action == A_REMOVE_ADD_END)
+                                output << matched.end;
+                        }
+                        break;
+                    case A_MOVE_HERE: // Вставляем сюда накопленные ранее фрагменты
+                        output << end_insert.str() << matched.begin;
+                        iter++;
+                        break;
+                    case A_DONT_TOUCH: // Не трогаем такой фрагмент
+                        output << *iter++;
+                        break;
+                    default:
+                        break;
+                }
             }
+            if (iter == end) break;
         }
-        if (iter == end) break;
+    } catch (...) {
+        output.flush();
+        output.close();
+        cout << " NO OUTPUT DUE TO ERROR(s)" << endl;
+        std::filesystem::remove(outputFilename);
+        return;
     }
     output.flush();
     auto len = output.tellp();
