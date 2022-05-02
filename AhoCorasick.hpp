@@ -220,7 +220,7 @@ namespace aho_corasick {
             }
         }
 
-        emit_collection nextMatch(std::istream_iterator<CharType> &it, std::istream_iterator<CharType> &end,
+        emit_collection nextMatch(std::istreambuf_iterator<CharType> &it, std::istreambuf_iterator<CharType> &end,
                                   std::ostream &skipsStream) {
             check_construct_failure_states();
             size_t pos = 0;

@@ -11,7 +11,7 @@
 
 using namespace std;
 
-#define GLOB_MANY_CHAR "#"
+#define GLOB_MANY_CHAR "*"
 #define GLOB_ONE_CHAR "?"
 
 //Возможные действия с фрагментами:
@@ -91,7 +91,7 @@ searchable_t searchable_items[] = {
 };
 
 //Ищет подстроку в потоке попутно копируя символы в выходной поток. Использует тот же алгоритм Ахо-Корасик что и основной поиск (в processFile)
-void copy_till(istream_iterator<char> &begin, istream_iterator<char> &end, ostream &destination, string suffix) {
+void copy_till(istreambuf_iterator<char> &begin, istreambuf_iterator<char> &end, ostream &destination, string suffix) {
     aho_corasick::trie suffixSearcher;
     suffixSearcher.insert(suffix);
     auto match = suffixSearcher.nextMatch(begin, end, destination);
@@ -110,8 +110,8 @@ void processFile(aho_corasick::trie &trie, const filesystem::path &filename) {
     auto outputFilename = filesystem::path(filename).replace_filename(
             filename.filename().replace_extension("").string() + "$" + filename.extension().string());
     auto output = ofstream(outputFilename, ios::binary | ios::out);
-    istream_iterator<char> iter(input);
-    istream_iterator<char> end;
+    istreambuf_iterator<char> iter(input);
+    istreambuf_iterator<char> end;
     stringstream end_insert;
 
     try {
@@ -121,12 +121,13 @@ void processFile(aho_corasick::trie &trie, const filesystem::path &filename) {
             auto m = trie.nextMatch(iter, end, output);
             if (m.size() > 0) {
                 //Это то, что мы нашли. Нужно выбрать совпадение максимальной длины.
-                auto &matched = searchable_items[max_element(m.begin(), m.end(), [](auto &a, auto &b) {
+                auto maxMatch = max_element(m.begin(), m.end(), [](auto& a, auto& b) {
                     return a.size() < b.size();
-                })->get_index()];
+                    });
+                auto &matched = searchable_items[maxMatch->get_index()];
                 //Откатываемся обратно на длину найденного, т.к. в общем случае ничего делать не надо
                 if (matched.action != A_DONT_TOUCH)
-                    output.seekp(-(int) matched.begin.size() + 1, ios::cur);
+                    output.seekp(-((int) matched.begin.size()) + 1, ios::cur);
 
                 switch (matched.action) {
                     case A_REPLACE: // Заменяем найденое на searchable_t::end
@@ -149,11 +150,12 @@ void processFile(aho_corasick::trie &trie, const filesystem::path &filename) {
                         iter++;
                     case A_REMOVE_ADD_END:
                         if (matched.end.size()) { // Если задан конец фрагмента, надо его найти и удалить (не копировать) символы до его конца.
-                            if (search(iter, end, matched.end.begin(), matched.end.end()) == end) {
+                            auto ee = search(iter, end, matched.end.begin(), matched.end.end());
+                            if (ee == end) {                                
                                 cout << " FATAL ERROR: Cannot find end of removable section " << matched.end;
                                 throw 1;
                             }
-                            iter++;
+                            iter = ee;
                             if (matched.action == A_REMOVE_ADD_END)
                                 output << matched.end;
                         }
