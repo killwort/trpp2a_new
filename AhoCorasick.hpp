@@ -34,7 +34,6 @@
 #include <vector>
 #include <limits>
 #include <iterator>
-#include <bits/stream_iterator.h>
 
 namespace aho_corasick {
 
