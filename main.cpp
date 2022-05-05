@@ -90,15 +90,123 @@ searchable_t searchable_items[] = {
         {"\\end{document}",                   "",                                                                    A_MOVE_HERE}
 };
 
-//Ищет подстроку в потоке попутно копируя символы в выходной поток. Использует тот же алгоритм Ахо-Корасик что и основной поиск (в processFile)
-void copy_till(istreambuf_iterator<char> &begin, istreambuf_iterator<char> &end, ostream &destination, string suffix) {
-    aho_corasick::trie suffixSearcher;
-    suffixSearcher.insert(suffix);
-    auto match = suffixSearcher.nextMatch(begin, end, destination);
-    if (match.size() == 0) {
-        cout << " FATAL ERROR: Cannot find end of movable section " << suffix;
-        throw 1;
+void copy_till(istreambuf_iterator<char>& begin, istreambuf_iterator<char>& end, ostream& destination, string suffix);
+
+void actionReplace(const searchable_t& matched, istreambuf_iterator<char>& begin, istreambuf_iterator<char>& end, ostream& destination, stringstream& secondaryOutput) {
+    destination << matched.end;
+    begin++;
+}
+void actionDontTouch(const searchable_t& matched, istreambuf_iterator<char>& begin, istreambuf_iterator<char>& end, ostream& destination, stringstream& secondaryOutput) {
+    destination << *begin++;
+}
+
+void actionMoveToEnd(const searchable_t& matched, istreambuf_iterator<char>& iter, istreambuf_iterator<char>& end, ostream& output, stringstream& secondaryOutput) {
+    // Добавляем во временное хранилище начало фрагмента - оно было съедено поиском
+    secondaryOutput<< matched.begin;
+    iter++;
+    // Если задан конец фрагмента - находим его, попутно копируя во временное хранилище
+    if (matched.end.size()) {
+        copy_till(iter, end, secondaryOutput, matched.end);
+        secondaryOutput << *iter++;
     }
+    secondaryOutput << endl << endl;
+    output << " ..... ";
+}
+
+void actionRemoveAddEnd(const searchable_t& matched, istreambuf_iterator<char>& begin, istreambuf_iterator<char>& end, ostream& destination, stringstream& secondaryOutput) {
+    if (matched.end.size()) { // Если задан конец фрагмента, надо его найти и удалить (не копировать) символы до его конца.
+        auto ee = search(begin, end, matched.end.begin(), matched.end.end());
+        if (ee == end) {
+            cout << " FATAL ERROR: Cannot find end of removable section " << matched.end;
+            throw 1;
+        }
+        begin = ee;
+        if (matched.action == A_REMOVE_ADD_END)
+            destination << matched.end;
+    }
+}
+void actionRemove(const searchable_t& matched, istreambuf_iterator<char>& begin, istreambuf_iterator<char>& end, ostream& destination, stringstream& secondaryOutput) {
+    begin++;
+    actionRemoveAddEnd(matched, begin, end, destination, secondaryOutput);
+}
+void actionMoveHere(const searchable_t& matched, istreambuf_iterator<char>& begin, istreambuf_iterator<char>& end, ostream& destination, stringstream& secondaryOutput) {
+    destination << secondaryOutput.str() << matched.begin;
+    begin++;
+}
+auto actionMethods = {
+    &actionDontTouch,
+    &actionMoveToEnd,
+    &actionRemove,
+    &actionRemoveAddEnd,
+    &actionReplace,
+    &actionMoveHere
+};
+
+//Ищет подстроку в потоке попутно копируя символы в выходной поток. Использует тот же алгоритм Ахо-Корасик что и основной поиск (в processFile)
+void copy_till(istreambuf_iterator<char>& begin, istreambuf_iterator<char>& end, ostream& destination, string suffix) {
+    aho_corasick::trie suffixSearcher;
+    //Подготовим "бор" (ДКА) для алгоритма Ахо-Корасик
+    auto n = sizeof(searchable_items) / sizeof(*searchable_items);
+    vector<searchable_t*> currentItems;
+    for (auto i = 0; i < n; i++)
+        //Всё кроме перемещаемых секций
+        if (searchable_items[i].action != A_MOVE_TO_END && searchable_items[i].action != A_MOVE_HERE) {
+            currentItems.push_back(&searchable_items[i]);
+            suffixSearcher.insert(searchable_items[i].begin);
+        }
+    //Плюс, конец текущего фрагмента
+    suffixSearcher.insert(suffix);
+
+    //Основной цикл
+    while (true) {
+        //Ищем что-нибудь из списка, попутно выводя симолы в выходной файл
+        auto m = suffixSearcher.nextMatch(begin, end, destination);
+        if (m.size() > 0) {
+            //Это то, что мы нашли. Нужно выбрать совпадение максимальной длины.
+            auto maxMatch = max_element(m.begin(), m.end(), [](auto& a, auto& b) {
+                return a.size() < b.size();
+                });
+            auto ix = maxMatch->get_index();
+            if (maxMatch->get_index() == currentItems.size()) {
+                //Здесь мы нашли конец, просто возвращаем управление
+                return;
+            }
+            auto& matched = *currentItems[maxMatch->get_index()];
+            //Откатываемся обратно на длину найденного, т.к. в общем случае ничего делать не надо
+            if (matched.action != A_DONT_TOUCH)
+                destination.seekp(-((int)matched.begin.size()) + 1, ios::cur);
+
+            switch (matched.action) {
+            case A_REPLACE: // Заменяем найденое на searchable_t::end
+                destination << matched.end;
+                begin++;
+                break;
+            case A_REMOVE: // Удаляем фрагмент
+                begin++;
+            case A_REMOVE_ADD_END:
+                if (matched.end.size()) { // Если задан конец фрагмента, надо его найти и удалить (не копировать) символы до его конца.
+                    auto ee = search(begin, end, matched.end.begin(), matched.end.end());
+                    if (ee == end) {
+                        cout << " FATAL ERROR: Cannot find end of removable section " << matched.end;
+                        throw 1;
+                    }
+                    begin = ee;
+                    if (matched.action == A_REMOVE_ADD_END)
+                        destination << matched.end;
+                }
+                break;
+            case A_DONT_TOUCH: // Не трогаем такой фрагмент
+                destination << *begin++;
+                break;
+            default:
+                break;
+            }
+        }
+        if (begin == end) break;
+    }
+    //Если мы выпали из цикла (==дошли до конца файла так и не найдя конец секции - это ошибка)
+    cout << " FATAL ERROR: Cannot find end of movable section " << suffix;
+    throw 1;
 }
 
 //Обрабатывает один файл

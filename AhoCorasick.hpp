@@ -229,6 +229,7 @@ namespace aho_corasick {
 
             for (; it != end; it++) {
                 auto c = *it;
+                // std::cout << c;
                 cur_state = get_state(cur_state, c);
                 auto emits = cur_state->get_emits();
                 store_emits(pos, cur_state, collected_emits);
