@@ -10,17 +10,20 @@
 #include <filesystem>
 #include <sstream>
 
-void copy_till(std::istreambuf_iterator<char>& begin, std::istreambuf_iterator<char>& end, std::ostream& destination, std::string suffix);
+template<class TChar>
+void copy_till(std::istreambuf_iterator<TChar>& begin, std::istreambuf_iterator<TChar>& end, std::basic_ostream<TChar>& destination, std::basic_string<TChar> suffix);
 
-void actionReplace(const searchable_t& matched, std::istreambuf_iterator<char>& begin, std::istreambuf_iterator<char>& end, std::ostream& destination, std::stringstream& secondaryOutput) {
+template<class TChar>
+void actionReplace(const searchable_t<TChar>& matched, std::istreambuf_iterator<TChar>& begin, std::istreambuf_iterator<TChar>& end, std::basic_ostream<TChar>& destination, std::basic_stringstream<TChar>& secondaryOutput) {
     destination << matched.end;
     begin++;
 }
-void actionDontTouch(const searchable_t& matched, std::istreambuf_iterator<char>& begin, std::istreambuf_iterator<char>& end, std::ostream& destination, std::stringstream& secondaryOutput) {
+template<class TChar>
+void actionDontTouch(const searchable_t<TChar>& matched, std::istreambuf_iterator<TChar>& begin, std::istreambuf_iterator<TChar>& end, std::basic_ostream<TChar>& destination, std::basic_stringstream<TChar>& secondaryOutput) {
     destination << *begin++;
 }
-
-void actionMoveToEnd(const searchable_t& matched, std::istreambuf_iterator<char>& iter, std::istreambuf_iterator<char>& end, std::ostream& output, std::stringstream& secondaryOutput) {
+template<class TChar>
+void actionMoveToEnd(const searchable_t<TChar>& matched, std::istreambuf_iterator<TChar>& iter, std::istreambuf_iterator<TChar>& end, std::basic_ostream<TChar>& output, std::basic_stringstream<TChar>& secondaryOutput) {
     // Добавляем во временное хранилище начало фрагмента - оно было съедено поиском
     secondaryOutput << matched.begin;
     iter++;
@@ -32,12 +35,12 @@ void actionMoveToEnd(const searchable_t& matched, std::istreambuf_iterator<char>
     secondaryOutput << std::endl << std::endl;
     output << " ..... ";
 }
-
-void actionRemoveAddEnd(const searchable_t& matched, std::istreambuf_iterator<char>& begin, std::istreambuf_iterator<char>& end, std::ostream& destination, std::stringstream& secondaryOutput) {
+template<class TChar>
+void actionRemoveAddEnd(const searchable_t<TChar>& matched, std::istreambuf_iterator<TChar>& begin, std::istreambuf_iterator<TChar>& end, std::basic_ostream<TChar>& destination, std::basic_stringstream<TChar>& secondaryOutput) {
     if (matched.end.size()) { // Если задан конец фрагмента, надо его найти и удалить (не копировать) символы до его конца.
         auto ee = search(begin, end, matched.end.begin(), matched.end.end());
-        if (ee == end) {
-            std::cout << " FATAL ERROR: Cannot find end of removable section " << matched.end;
+        if (ee == end) {            
+            COUT << _S(" FATAL ERROR: Cannot find end of removable section ") << matched.end;
             throw 1;
         }
         begin = ee;
@@ -45,18 +48,21 @@ void actionRemoveAddEnd(const searchable_t& matched, std::istreambuf_iterator<ch
             destination << matched.end;
     }
 }
-void actionRemove(const searchable_t& matched, std::istreambuf_iterator<char>& begin, std::istreambuf_iterator<char>& end, std::ostream& destination, std::stringstream& secondaryOutput) {
+template<class TChar>
+void actionRemove(const searchable_t<TChar>& matched, std::istreambuf_iterator<TChar>& begin, std::istreambuf_iterator<TChar>& end, std::basic_ostream<TChar>& destination, std::basic_stringstream<TChar>& secondaryOutput) {
     begin++;
-    actionRemoveAddEnd(matched, begin, end, destination, secondaryOutput);
+    actionRemoveAddEnd<TChar>(matched, begin, end, destination, secondaryOutput);
 }
-void actionMoveHere(const searchable_t& matched, std::istreambuf_iterator<char>& begin, std::istreambuf_iterator<char>& end, std::ostream& destination, std::stringstream& secondaryOutput) {
+template<class TChar>
+void actionMoveHere(const searchable_t<TChar>& matched, std::istreambuf_iterator<TChar>& begin, std::istreambuf_iterator<TChar>& end, std::basic_ostream<TChar>& destination, std::basic_stringstream<TChar>& secondaryOutput) {
     destination << secondaryOutput.str() << matched.begin;
     begin++;
 }
-typedef void(*fnAction)(const searchable_t& matched, std::istreambuf_iterator<char>& begin, std::istreambuf_iterator<char>& end, std::ostream& destination, std::stringstream& secondaryOutput);
 
+
+template<class TChar>
 //Порядок должен соответствовать нумерации констант A_* !
-fnAction actionMethods[] = {
+void(*actionMethods[])(const searchable_t<TChar>& matched, std::istreambuf_iterator<TChar>& begin, std::istreambuf_iterator<TChar>& end, std::basic_ostream<TChar>& destination, std::basic_stringstream<TChar>& secondaryOutput)  = {
     &actionDontTouch,
     &actionMoveToEnd,
     &actionRemove,

@@ -1,6 +1,7 @@
 #ifndef SEARCHABLE_HPP
 #define SEARCHABLE_HPP
 #include <string>
+#include "char.h"
 //Возможные действия с фрагментами:
 //--------------
 //Не трогать найденное - просто скопировать на вывод. Полезно для escape-последовательностей, например, \\ или \%
@@ -16,64 +17,65 @@
 //Маркер, куда нужно поместить перемещаемые фрагменты
 #define A_MOVE_HERE 5
 
-typedef struct {
+template<class TChar>
+struct searchable_t {
     //Начало фрагмента
-    std::string begin;
+    std::basic_string<TChar> begin;
     //Конец фрагмента (или пустая строка, если фрагмент состоит только из начала, или строка на которую будет заменяться начало для действия A_REPLACE
-    std::string end;
+    std::basic_string<TChar> end;
     //Действие
     int action;
-} searchable_t;
+};
 
 //Определение действий со строками
-searchable_t searchable_items[] = {
-        {"\\\"",                              "",                                                                    A_DONT_TOUCH},
-        {"\\%",                               "",                                                                    A_DONT_TOUCH},
-        {"\\\\",                              "",                                                                    A_DONT_TOUCH},
-        {"\\~",                               "",                                                                    A_DONT_TOUCH},
-        {"$$",                                "$$",                                                                  A_MOVE_TO_END},
-        {"\\[",                               "\\]",                                                                 A_MOVE_TO_END},
-        {"\\midinsert",                       "\\endinsert",                                                         A_MOVE_TO_END},
-        {"\\topinsert",                       "\\endinsert",                                                         A_MOVE_TO_END},
-        {"\\botinsert",                       "\\endinsert",                                                         A_MOVE_TO_END},
-        {"\\begin{equation}",                 "\\end{equation}",                                                     A_MOVE_TO_END},
-        {"\\begin{equation*}",                "\\end{equation*}",                                                    A_MOVE_TO_END},
-        {"\\begin{gather}",                   "\\end{gather}",                                                       A_MOVE_TO_END},
-        {"\\begin{gather*}",                  "\\end{gather*}",                                                      A_MOVE_TO_END},
-        {"\\begin{multline}",                 "\\end{multline}",                                                     A_MOVE_TO_END},
-        {"\\begin{multline*}",                "\\end{multline*}",                                                    A_MOVE_TO_END},
-        {"\\begin{align}",                    "\\end{align}",                                                        A_MOVE_TO_END},
-        {"\\begin{align*}",                   "\\end{align*}",                                                       A_MOVE_TO_END},
-        {"\\begin{aligned}",                  "\\end{aligned}",                                                      A_MOVE_TO_END},
-        {"\\begin{aligned*}",                 "\\end{aligned*}",                                                     A_MOVE_TO_END},
-        {"\\begin{alignat}",                  "\\end{alignat}",                                                      A_MOVE_TO_END},
-        {"\\begin{alignat*}",                 "\\end{alignat*}",                                                     A_MOVE_TO_END},
-        {"\\begin{alignedat}",                "\\end{alignedat}",                                                    A_MOVE_TO_END},
-        {"\\begin{alignedat*}",               "\\end{alignedat*}",                                                   A_MOVE_TO_END},
-        {"\\begin{figure}",                   "\\end{figure}",                                                       A_MOVE_TO_END},
-        {"\\begin{figure*}",                  "\\end{figure*}",                                                      A_MOVE_TO_END},
-        {"\\begin{tabular}",                  "\\end{tabular}",                                                      A_MOVE_TO_END},
-        {"\\begin{tabular*}",                 "\\end{tabular*}",                                                     A_MOVE_TO_END},
-        {"\\begin{table}",                    "\\end{table}",                                                        A_MOVE_TO_END},
-        {"\\begin{table*}",                   "\\end{table*}",                                                       A_MOVE_TO_END},
-        {"\\begin{longtable}",                "\\end{longtable}",                                                    A_MOVE_TO_END},
-        {"%",                                 "\n",                                                                  A_REMOVE_ADD_END},
-        {"\\Lenth",                           "\n",                                                                  A_REMOVE_ADD_END},
-        {"\\enlargethispage",                 "\n",                                                                  A_REMOVE_ADD_END},
-        {"\\renewcommand{\\baselinestretch}", "\n",                                                                  A_REMOVE_ADD_END},
-        {"\\def\\baselinestretch",            "\n",                                                                  A_REMOVE_ADD_END},
-        {"\\normalbaselineskip",              "\n",                                                                  A_REMOVE_ADD_END},
-        {"\\baselineskip",                    "\n",                                                                  A_REMOVE_ADD_END},
-        {"\\vadjust{\\eject}",                "\n",                                                                  A_REMOVE_ADD_END},
-        {"\\pagebreak",                       "",                                                                    A_REMOVE},
-        {"\\goodbreak",                       "",                                                                    A_REMOVE},
-        {"\\newpage",                         "",                                                                    A_REMOVE},
-        {"~",                                 " ",                                                                   A_REPLACE},
-        {"\"",                                " ",                                                                   A_REPLACE},
-        {"\\linebreak",                       "\\relax",                                                             A_REPLACE},
-        {"\\nobreak",                         "\\relax",                                                             A_REPLACE},
-        {"\\break",                           "\\relax",                                                             A_REPLACE},
-        {"\\begin{document}",                 "\\hfuzz=4cm\n\\hbadness=10000\n\\tolerance1000\n\n\\begin{document}", A_REPLACE},
-        {"\\end{document}",                   "",                                                                    A_MOVE_HERE}
+searchable_t<CHAR> searchable_items[] = {
+        {_S("\\\""),                              _S(""),                                                                    A_DONT_TOUCH},
+        {_S("\\%"),                               _S(""),                                                                    A_DONT_TOUCH},
+        {_S("\\\\"),                              _S(""),                                                                    A_DONT_TOUCH},
+        {_S("\\~"),                               _S(""),                                                                    A_DONT_TOUCH},
+        {_S("$$"),                                _S("$$"),                                                                  A_MOVE_TO_END},
+        {_S("\\["),                               _S("\\]"),                                                                 A_MOVE_TO_END},
+        {_S("\\midinsert"),                       _S("\\endinsert"),                                                         A_MOVE_TO_END},
+        {_S("\\topinsert"),                       _S("\\endinsert"),                                                         A_MOVE_TO_END},
+        {_S("\\botinsert"),                       _S("\\endinsert"),                                                         A_MOVE_TO_END},
+        {_S("\\begin{equation}"),                 _S("\\end{equation}"),                                                     A_MOVE_TO_END},
+        {_S("\\begin{equation*}"),                _S("\\end{equation*}"),                                                    A_MOVE_TO_END},
+        {_S("\\begin{gather}"),                   _S("\\end{gather}"),                                                       A_MOVE_TO_END},
+        {_S("\\begin{gather*}"),                  _S("\\end{gather*}"),                                                      A_MOVE_TO_END},
+        {_S("\\begin{multline}"),                 _S("\\end{multline}"),                                                     A_MOVE_TO_END},
+        {_S("\\begin{multline*}"),                _S("\\end{multline*}"),                                                    A_MOVE_TO_END},
+        {_S("\\begin{align}"),                    _S("\\end{align}"),                                                        A_MOVE_TO_END},
+        {_S("\\begin{align*}"),                   _S("\\end{align*}"),                                                       A_MOVE_TO_END},
+        {_S("\\begin{aligned}"),                  _S("\\end{aligned}"),                                                      A_MOVE_TO_END},
+        {_S("\\begin{aligned*}"),                 _S("\\end{aligned*}"),                                                     A_MOVE_TO_END},
+        {_S("\\begin{alignat}"),                  _S("\\end{alignat}"),                                                      A_MOVE_TO_END},
+        {_S("\\begin{alignat*}"),                 _S("\\end{alignat*}"),                                                     A_MOVE_TO_END},
+        {_S("\\begin{alignedat}"),                _S("\\end{alignedat}"),                                                    A_MOVE_TO_END},
+        {_S("\\begin{alignedat*}"),               _S("\\end{alignedat*}"),                                                   A_MOVE_TO_END},
+        {_S("\\begin{figure}"),                   _S("\\end{figure}"),                                                       A_MOVE_TO_END},
+        {_S("\\begin{figure*}"),                  _S("\\end{figure*}"),                                                      A_MOVE_TO_END},
+        {_S("\\begin{tabular}"),                  _S("\\end{tabular}"),                                                      A_MOVE_TO_END},
+        {_S("\\begin{tabular*}"),                 _S("\\end{tabular*}"),                                                     A_MOVE_TO_END},
+        {_S("\\begin{table}"),                    _S("\\end{table}"),                                                        A_MOVE_TO_END},
+        {_S("\\begin{table*}"),                   _S("\\end{table*}"),                                                       A_MOVE_TO_END},
+        {_S("\\begin{longtable}"),                _S("\\end{longtable}"),                                                    A_MOVE_TO_END},
+        {_S("%"),                                 _S("\n"),                                                                  A_REMOVE_ADD_END},
+        {_S("\\Lenth"),                           _S("\n"),                                                                  A_REMOVE_ADD_END},
+        {_S("\\enlargethispage"),                 _S("\n"),                                                                  A_REMOVE_ADD_END},
+        {_S("\\renewcommand{\\baselinestretch}"), _S("\n"),                                                                  A_REMOVE_ADD_END},
+        {_S("\\def\\baselinestretch"),            _S("\n"),                                                                  A_REMOVE_ADD_END},
+        {_S("\\normalbaselineskip"),              _S("\n"),                                                                  A_REMOVE_ADD_END},
+        {_S("\\baselineskip"),                    _S("\n"),                                                                  A_REMOVE_ADD_END},
+        {_S("\\vadjust{\\eject}"),                _S("\n"),                                                                  A_REMOVE_ADD_END},
+        {_S("\\pagebreak"),                       _S(""),                                                                    A_REMOVE},
+        {_S("\\goodbreak"),                       _S(""),                                                                    A_REMOVE},
+        {_S("\\newpage"),                         _S(""),                                                                    A_REMOVE},
+        {_S("~"),                                 _S(" "),                                                                   A_REPLACE},
+        {_S("\""),                                _S(" "),                                                                   A_REPLACE},
+        {_S("\\linebreak"),                       _S("\\relax"),                                                             A_REPLACE},
+        {_S("\\nobreak"),                         _S("\\relax"),                                                             A_REPLACE},
+        {_S("\\break"),                           _S("\\relax"),                                                             A_REPLACE},
+        {_S("\\begin{document}"),                 _S("\\hfuzz=4cm\n\\hbadness=10000\n\\tolerance1000\n\n\\begin{document}"), A_REPLACE},
+        {_S("\\end{document}"),                   _S(""),                                                                    A_MOVE_HERE}
 };
 #endif

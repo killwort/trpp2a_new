@@ -32,5 +32,8 @@
     <ClInclude Include="glob.hpp">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
+    <ClInclude Include="char.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

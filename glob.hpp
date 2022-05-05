@@ -66,10 +66,10 @@ void enumerateGlob(const std::filesystem::path& current, std::filesystem::path::
     auto spath = path->string();
     newPath += regex_replace(spath, globRegex, [](auto const& match) {
         if (match.str() == GLOB_MANY_CHAR)
-            return string(".*");
+            return std::string(".*");
         else if (match.str() == GLOB_ONE_CHAR)
-            return string(".");
-        return string("\\") + match.str();
+            return std::string(".");
+        return std::string("\\") + match.str();
 
         });
     newPath += "$";
