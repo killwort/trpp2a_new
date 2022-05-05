@@ -30,7 +30,10 @@
     <ClCompile Include="D:\work\own\trpp2a_new\main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="actions.hpp" />
     <ClInclude Include="D:\work\own\trpp2a_new\AhoCorasick.hpp" />
+    <ClInclude Include="glob.hpp" />
+    <ClInclude Include="searchable.hpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
