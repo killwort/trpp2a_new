@@ -2,28 +2,33 @@
 #define ACTIONS_HPP
 #include <iostream>
 #include <string>
-#include <list>
 #include <algorithm>
 #include <fstream>
-#include <regex>
 #include <iterator>
-#include <filesystem>
 #include <sstream>
 
 template<class TChar>
 void copy_till(std::istreambuf_iterator<TChar>& begin, std::istreambuf_iterator<TChar>& end, std::basic_ostream<TChar>& destination, std::basic_string<TChar> suffix);
 
 template<class TChar>
+void rollback(const searchable_t<TChar>& matched, std::basic_ostream<TChar>& destination) {
+    destination.seekp(-((int)matched.begin.size()) + 1, std::ios::cur);
+}
+
+template<class TChar>
 void actionReplace(const searchable_t<TChar>& matched, std::istreambuf_iterator<TChar>& begin, std::istreambuf_iterator<TChar>& end, std::basic_ostream<TChar>& destination, std::basic_stringstream<TChar>& secondaryOutput) {
+    rollback(matched, destination);
     destination << matched.end;
     begin++;
 }
 template<class TChar>
 void actionDontTouch(const searchable_t<TChar>& matched, std::istreambuf_iterator<TChar>& begin, std::istreambuf_iterator<TChar>& end, std::basic_ostream<TChar>& destination, std::basic_stringstream<TChar>& secondaryOutput) {
+    //Здесь rollback(match, destination) не нужен!
     destination << *begin++;
 }
 template<class TChar>
 void actionMoveToEnd(const searchable_t<TChar>& matched, std::istreambuf_iterator<TChar>& iter, std::istreambuf_iterator<TChar>& end, std::basic_ostream<TChar>& output, std::basic_stringstream<TChar>& secondaryOutput) {
+    rollback(matched, output);
     // Добавляем во временное хранилище начало фрагмента - оно было съедено поиском
     secondaryOutput << matched.begin;
     iter++;
@@ -37,6 +42,7 @@ void actionMoveToEnd(const searchable_t<TChar>& matched, std::istreambuf_iterato
 }
 template<class TChar>
 void actionRemoveAddEnd(const searchable_t<TChar>& matched, std::istreambuf_iterator<TChar>& begin, std::istreambuf_iterator<TChar>& end, std::basic_ostream<TChar>& destination, std::basic_stringstream<TChar>& secondaryOutput) {
+    rollback(matched, destination);
     if (matched.end.size()) { // Если задан конец фрагмента, надо его найти и удалить (не копировать) символы до его конца.
         auto ee = search(begin, end, matched.end.begin(), matched.end.end());
         if (ee == end) {            
@@ -55,6 +61,7 @@ void actionRemove(const searchable_t<TChar>& matched, std::istreambuf_iterator<T
 }
 template<class TChar>
 void actionMoveHere(const searchable_t<TChar>& matched, std::istreambuf_iterator<TChar>& begin, std::istreambuf_iterator<TChar>& end, std::basic_ostream<TChar>& destination, std::basic_stringstream<TChar>& secondaryOutput) {
+    rollback(matched, destination);
     destination << secondaryOutput.str() << matched.begin;
     begin++;
 }

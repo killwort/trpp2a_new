@@ -1,17 +1,8 @@
-#include <iostream>
-#include <string>
-#include <list>
-#include <algorithm>
-#include <fstream>
-#include <regex>
-#include <iterator>
-#include <filesystem>
-#include <sstream>
+#include "char.h"
 #include "AhoCorasick.hpp"
 #include "searchable.hpp"
 #include "actions.hpp"
 #include "glob.hpp"
-#include "char.h"
 
 template<class TChar>
 //Ищет подстроку в потоке попутно копируя символы в выходной поток. Использует тот же алгоритм Ахо-Корасик что и основной поиск (в processFile)
@@ -36,19 +27,11 @@ void copy_till(std::istreambuf_iterator<TChar>& begin, std::istreambuf_iterator<
         auto m = suffixSearcher.nextMatch(begin, end, destination);
         if (m.size() > 0) {
             //Это то, что мы нашли. Нужно выбрать совпадение максимальной длины.
-            auto maxMatch = max_element(m.begin(), m.end(), [](auto& a, auto& b) {
-                return a.size() < b.size();
-                });
-            auto ix = maxMatch->get_index();
-            if (maxMatch->get_index() == currentItems.size()) {
-                //Здесь мы нашли конец, просто возвращаем управление
-                return;
-            }
+            auto maxMatch = max_element(m.begin(), m.end(), [](auto& a, auto& b) { return a.size() < b.size(); });
+            //Если мы нашли конец фрагмента, просто возвращаем управление
+            if (maxMatch->get_index() == currentItems.size())
+                return;            
             auto& matched = *currentItems[maxMatch->get_index()];
-            //Откатываемся обратно на длину найденного, т.к. в общем случае ничего делать не надо
-            if (matched.action != A_DONT_TOUCH)
-                destination.seekp(-((int)matched.begin.size()) + 1, std::ios::cur);
-
             actionMethods<TChar>[matched.action](matched, begin, end, destination, ignore);
         }
         if (begin == end) break;
@@ -78,14 +61,8 @@ void processFile(aho_corasick::basic_trie<TChar> &trie, const std::filesystem::p
             auto m = trie.nextMatch(iter, end, output);
             if (m.size() > 0) {
                 //Это то, что мы нашли. Нужно выбрать совпадение максимальной длины.
-                auto maxMatch = max_element(m.begin(), m.end(), [](auto& a, auto& b) {
-                    return a.size() < b.size();
-                    });
+                auto maxMatch = max_element(m.begin(), m.end(), [](auto& a, auto& b) { return a.size() < b.size(); });
                 auto &matched = searchable_items[maxMatch->get_index()];
-                //Откатываемся обратно на длину найденного, т.к. в общем случае ничего делать не надо
-                if (matched.action != A_DONT_TOUCH)
-                    output.seekp(-((int) matched.begin.size()) + 1, std::ios::cur);
-
                 actionMethods<TChar>[matched.action](matched, iter, end, output, end_insert);
             }
             if (iter == end) break;

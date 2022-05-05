@@ -1,14 +1,11 @@
 #ifndef GLOB_HPP
 #define GLOB_HPP
-#include <iostream>
 #include <string>
 #include <list>
 #include <algorithm>
-#include <fstream>
 #include <regex>
 #include <iterator>
 #include <filesystem>
-#include <sstream>
 
 #define GLOB_MANY_CHAR "*"
 #define GLOB_ONE_CHAR "?"
