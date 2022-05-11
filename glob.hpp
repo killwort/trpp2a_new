@@ -70,7 +70,7 @@ void enumerateGlob(const std::filesystem::path& current, std::filesystem::path::
 
         });
     newPath += "$";
-    std::regex thisRegex(newPath);
+    std::regex thisRegex(newPath, std::regex_constants::icase | std::regex_constants::ECMAScript);
 
     //Это следующий элемент пути
     auto nextPath(path);

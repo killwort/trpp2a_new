@@ -39,6 +39,19 @@ void actionMoveToEnd(const searchable_t<TChar>& matched, std::istreambuf_iterato
     }
     secondaryOutput << std::endl << std::endl;
     output << " ..... ";
+    std::istreambuf_iterator<TChar> lookahead (iter);
+    lookahead++;
+    if (*iter == ' ' && (*lookahead == '\r' || *lookahead == '\n')) {
+        iter++;
+        iter++;
+        if (*iter == '\n') iter++;
+    }
+    else if (*iter == '\r' && *lookahead == '\n') {
+        iter++;
+        iter++;
+    }
+    else if (*iter == '\n')
+        iter++;
 }
 template<class TChar>
 void actionRemoveAddEnd(const searchable_t<TChar>& matched, std::istreambuf_iterator<TChar>& begin, std::istreambuf_iterator<TChar>& end, std::basic_ostream<TChar>& destination, std::basic_stringstream<TChar>& secondaryOutput) {
